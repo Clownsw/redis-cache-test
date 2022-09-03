@@ -23,3 +23,6 @@ fast_log = { version = "1.5", features = [] }
 
 #redis
 redis = { version = "0.21", features = ["tokio-comp"] }
+
+#chrono
+chrono = { version = "0.4", features = ["serde"] }

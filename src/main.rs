@@ -1,3 +1,4 @@
+use chrono::Local;
 use fast_log::{Config, FastLogFormat};
 use fast_log::filter::NoFilter;
 use fast_log::plugin::console::ConsoleAppender;
@@ -79,22 +80,32 @@ pub async fn build_data(rb: &mut Rbatis, client: &mut redis::aio::Connection) ->
     Ok(())
 }
 
-pub async fn get_blog_vec_by_sort_id(sort_id: i32, client: &mut redis::aio::Connection) -> Result<(), Box<dyn std::error::Error>> {
-    let key = format!("blog:list:sort:info:{}", sort_id);
-    let key2 = format!("blog:list:sort:content:{}", sort_id);
-    let len = client.llen::<_, isize>(&key).await?;
+pub async fn get_blog_vec_by_sort_id(sort_id_vec: Vec<i32>, client: &mut redis::aio::Connection) -> Result<(), Box<dyn std::error::Error>> {
+    let mut blogs: Vec<Blog> = Vec::new();
 
-    println!("len {}", len);
+    let start_time = Local::now().timestamp();
+    for sort_id in sort_id_vec.iter() {
+        let key = format!("blog:list:sort:info:{}", sort_id);
+        let key2 = format!("blog:list:sort:content:{}", sort_id);
+        let len = client.llen::<_, isize>(&key).await?;
 
-    if len > 0 {
-        for i in 0..len {
-            let blog = Blog::from((
-                serde_json::from_str::<BlogInfo>(client.lindex::<_, String>(&key, i).await?.as_str())?,
-                serde_json::from_str::<BlogContent>(client.lindex::<_, String>(&key2, i).await?.as_str())?
-            ));
-            println!("{:#?}", blog);
+        if len > 0 {
+            for i in 0..len {
+                let blog = Blog::from((
+                    serde_json::from_str::<BlogInfo>(client.lindex::<_, String>(&key, i).await?.as_str())?,
+                    serde_json::from_str::<BlogContent>(client.lindex::<_, String>(&key2, i).await?.as_str())?
+                ));
+                blogs.push(blog);
+                // println!("{:#?}", blog);
+            }
         }
     }
+
+    let end_time = Local::now().timestamp();
+
+    println!("{} ms", end_time - start_time);
+    println!("{}, {}", start_time, end_time);
+    println!("{:#?}", blogs);
 
     Ok(())
 }
@@ -122,7 +133,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut client = client.get_async_connection().await?;
     // build_data(&mut rb, &mut client).await?;
-    get_blog_vec_by_sort_id(1, &mut client).await?;
+    get_blog_vec_by_sort_id(vec![1, 3, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17], &mut client).await?;
 
 
     Ok(())
